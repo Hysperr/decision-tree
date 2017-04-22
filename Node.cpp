@@ -1,4 +1,7 @@
 
+
+#include <cassert>
+#include <ctime>
 #include "Node.h"
 
 
@@ -18,25 +21,16 @@ Node::Node() : num_children(0), val("100"), v() {}
  * @param value
  * @param parent
  */
-Node::Node(std::string value, Node &parent) {
-    num_children = 0;
-    val = value;
-    v;
+Node::Node(std::string value, Node &parent) : num_children(0), val(value), v() {
     parent.attach(*this);       // 'this' is pointer to object's self. Dereferenced to satisfy attach() ref parameter
 }
-
 
 /**
  * Constructs node object initialized with string value
  *
  * @param value
  */
-Node::Node(std::string value) {
-    num_children = 0;
-    val = value;
-    v;
-}
-
+Node::Node(const std::string &value) : num_children(0), val(value), v() {}
 
 /**
  * Overloaded assignment operator= use primarily for debug
@@ -51,46 +45,28 @@ Node &Node::operator=(const Node &other) {
     return *this;
 }
 
-
 /**
- * Attaches {node} to calling node. Performs reallocation due to
- * required NULL pointer for each {attach} call. Will improve.
+ * Attaches <code>node</code> to <code>this</code> node.
+ * Improved.
  *
  * @param node
  * @return none
  */
 void Node::attach(Node &node) {
-    bool flag = false;
-    for (int i = 0; i < v.size(); i++) {
-        if (v[i] == NULL) {
-            v[i] = &node;
-            num_children += 1;
-            flag = true;
-            break;
-        }
-    }
-    if (!flag) {
-        v.resize(v.size() + 1, NULL);
-        this->attach(node);
-    }
-
+    Node *nptr = &node;
+    v.push_back(nptr);
+    num_children++;
 }
 
-
 /**
- * Prints first layer children of calling node.
- *
- * @param none
- * @return none
+ * Prints first layer children of <code>this</code> node
  */
-void Node::print_node_children() const {
+void Node::print_my_children() const {
     for (Node *i : v) {
         std::cout << i->get_val() << std::ends;
     }
     std::cout << "\n";
-
 }
-
 
 /**
  * Extracts behaviour or response string value from calling node.
@@ -143,6 +119,46 @@ void Node::m_extractVal() {
 }
 
 
+Node build_tree_xml(std::fstream &file) {
+    std::stack<Node> stack;
+    std::string line; std::getline(file, line);
+    Node *r0 = new Node(line);
+    stack.push(*r0);
+    while (stack.top().get_val().find("</root>") == std::string::npos) {
+
+        if (stack.top().get_val().find("/>") != std::string::npos) {
+            Node *tmp1 = new Node(stack.top());
+            stack.pop();
+            tmp1->m_extractVal();
+            stack.top().attach(*tmp1);
+
+        }
+        else if (stack.top().get_val().find("/node") != std::string::npos) {
+            stack.pop();
+            Node *tmp2 = new Node(stack.top());
+            stack.pop();
+            tmp2->m_extractVal();
+            stack.top().attach(*tmp2);
+
+        }
+
+        std::getline(file, line);
+        Node *tmp3 = new Node(line);
+        stack.push(*tmp3);
+
+    }
+
+    stack.pop();                                // pop </root>
+    Node tree_root = stack.top();               // retrieve root node
+    stack.pop();                                // clear stack
+    assert(stack.empty());                      // check stack empty
+    return tree_root;
+}
+
+
+
+
+
 /**
  * Depth First Search - DFS
  *
@@ -151,7 +167,7 @@ void Node::m_extractVal() {
  * @return number of nodes visited
  */
 int d_f_s(Node &node, std::string &target) {
-    std::cout << "Target -> " << target << std::endl;
+    std::cout << "Target -> " << target << '\n';
     int count = 0;
     bool flag = false;
     std::stack<Node> stack;
@@ -163,7 +179,7 @@ int d_f_s(Node &node, std::string &target) {
         /**std::cout << tmp.get_val() << std::endl;*/           // for debug
 
         if (tmp.get_val() == target) {
-            std::cout << "Status -> FOUND" << std::endl;
+            std::cout << "Status -> FOUND" << '\n';
             pick_random(tmp);
             flag = true;
             break;
@@ -179,7 +195,7 @@ int d_f_s(Node &node, std::string &target) {
     }
     if (!flag) {
         std::cout << "Status -> N/A\n";
-        std::cout << "The node \"" << target << "\" does not exist." << std::endl;
+        std::cout << "The node \"" << target << "\" does not exist." << '\n';
         return count;
     }
 
@@ -195,7 +211,7 @@ int d_f_s(Node &node, std::string &target) {
  * @return number of nodes visited
  */
 int b_f_s(Node &node, std::string &target) {
-    std::cout << "Target -> " << target << std::endl;
+    std::cout << "Target -> " << target << '\n';
     bool flag = false;
     int count = 0;
     std::queue<Node> queue;
@@ -207,7 +223,7 @@ int b_f_s(Node &node, std::string &target) {
         /**std::cout << tmp.get_val() << std::endl;*/               // for debug
 
         if (tmp.get_val() == target) {
-            std::cout << "Status -> FOUND" << std::endl;
+            std::cout << "Status -> FOUND" << '\n';
             pick_random(tmp);
             flag = true;
             break;
@@ -224,7 +240,7 @@ int b_f_s(Node &node, std::string &target) {
 
     if (!flag) {
         std::cout << "Status -> N/A\n";
-        std::cout << "The node \"" << target << "\" does not exist." << std::endl;
+        std::cout << "The node \"" << target << "\" does not exist." << '\n';
         return count;
 
     }
@@ -240,7 +256,7 @@ int b_f_s(Node &node, std::string &target) {
  * Selects random leaf node from given parent {&node}. Seed is
  * initialized with time(NULL) inside pick_random. This function
  * is called twice, once in bfs, another in dfs. Race condition
- * started for output. Should always be same output. In case of
+ * started for identical output. Should always be same output though. In case of
  * different values (which has never occurred with my machine),
  * simply take out call from either dfs or bfs but not both. This
  * fulfills the same requirements with extra safety.
@@ -249,9 +265,9 @@ int b_f_s(Node &node, std::string &target) {
  * @return the leaf node.
  */
 Node pick_random(Node &node) {
-    srand((unsigned int) time(NULL));
-    std::vector<Node> vector;
-    std::stack<Node> stack;      /**< Detailed description after member */
+    srand((unsigned int) time(NULL));       // must be here so bfs & dfs use same seed.
+    std::vector<Node> vector;               /**< Holds node positions for printing & stochastic selection */
+    std::stack<Node> stack;                 /**< For diving through tree. Not depth first! */
     stack.push(node);
 
     while (!stack.empty()) {
@@ -270,13 +286,17 @@ Node pick_random(Node &node) {
         }
     }
 
-    for (Node i : vector) std::cout << "Option -> " << i.get_val() << std::endl;        // for debug
+    // because nodes placed backwards on stack (not depth first), I use reverse_iterator to print in order.
+    // If changed to depth first, use normal iterator.
+    std::vector<Node>::reverse_iterator rit = vector.rbegin();
+    for (; rit != vector.rend(); ++rit)
+        std::cout << "Option -> " << rit->get_val() << '\n';
 
     int num = (int) (rand() % vector.size());
 
     Node the_chosen_one = vector[num];
 
-    std::cout << "Stochastic Response -> " << the_chosen_one.get_val() << std::endl;
+    std::cout << "Stochastic Response -> " << the_chosen_one.get_val() << '\n';
 
     return the_chosen_one;
 }

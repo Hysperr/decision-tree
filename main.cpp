@@ -1,115 +1,18 @@
+
 #define NDEBUG
 
 
 #include "Node.h"
-#include <stack>
 #include <sstream>
-#include <fstream>
-#include <cassert>
+#include <chrono>
 
 int main() {
 
-    Node s0("hello");
-    Node s1;
-    s0.attach(s1);
-    assert(s1.get_Vec().empty());
-    assert(!s0.get_Vec().empty());
-    std::cout << "s0 size is " << s0.get_Vec().size() << std::endl;     // 1
-    std::cout << "s1 size is " << s1.get_Vec().size() << std::endl;     // 0
-
-    Node n0;    // value is 100 by default
-    Node n1;
-    n0.attach(n1);
-    std::cout << n0.get_val() << std::endl;                     // passed       100
-
-    // attaching 2 more nodes to root
-    Node n2, n3;
-    n0.attach(n2);
-    n0.attach(n3);
-
-
-    // retrieve root's num_children
-    std::cout << n0.get_num_children() << std::endl;            // passed       3
-
-
-    // Cause reallocation in attach function. (because greater than 3 pointers required)
-    Node n4;
-    n0.attach(n4);
-    std::cout << n0.get_num_children() << std::endl;            // passed       4
-
-
-    // Testing get_Vec()
-    std::vector<Node *> v = n0.get_Vec();
-    // now list values of each child of this vector
-    for (Node *i : v)
-        std::cout << i->get_val() << std::ends;
-    std::cout << "\n";
-                                                                // passed       100, 100, 100, 100
-
-    // Test print_node_children() function
-    n0.print_node_children();                                   // passed       100, 100, 100, 100
-
-
-    // Attach layer 3 node (n5) to root's child (layer 2) then print layer 2's num children
-    Node n5;
-    n1.attach(n5);
-    std::cout << n1.get_num_children() << std::endl;            // passed       1
-
-
-    // New node with custom value and parent
-    Node n6("Miko", n0);
-    std::cout << n0.get_num_children() << std::endl;            // passed       5
-    std::cout << n6.get_val() << std::endl;                     // passed       Miko
-
-
-    std::cout << "======== CORE FUNCTIONALITY COMPLETE ========\nSuccess!\n";
-
-
     /** BUILDING TREE */
-
-    std::stack<Node> stack;
     std::fstream file("../tree.xml");
-    std::string line; std::getline(file, line);
-    Node *r0 = new Node(line);
-    stack.push(*r0);
+    Node root = build_tree_xml(file);
 
-    while (stack.top().get_val().find("</root>") == std::string::npos) {
-
-        if (stack.top().get_val().find("/>") != std::string::npos) {
-            Node *tmp1 = new Node(stack.top());
-            stack.pop();
-            tmp1->m_extractVal();
-            stack.top().attach(*tmp1);
-
-        }
-        else if (stack.top().get_val().find("/node") != std::string::npos) {
-            stack.pop();
-            Node *tmp2 = new Node(stack.top());
-            stack.pop();
-            tmp2->m_extractVal();
-            stack.top().attach(*tmp2);
-
-        }
-
-        std::getline(file, line);
-        Node *tmp3 = new Node(line);
-        stack.push(*tmp3);
-
-    }
-
-    stack.pop();                                                // pop </root>
-    Node root = stack.top();                                    // retrieve root node
-    stack.pop();                                                // clear stack
-    assert(stack.empty());                                      // check stack empty
-
-
-//    std::cout << root.get_val() << std::endl;                 // for debug
-//    std::cout << root.get_num_children() << std::endl;
-//    root.print_node_children();
-//    std::cout << '\n';
-
-
-    std::cout << "=========== SEARCHING ===========\n";
+    std::cout << "\n=========== SEARCHING DECISION TREE ===========\n\n";
 
     /**
      *  V1 - Option for User-entered string.
@@ -128,16 +31,38 @@ int main() {
      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
 
-    std::string str = "Combat";
+    std::string str = "<root>";
 //    std::string str = "Beluga!";
 
 
 
-    std::cout << "DFS - Depth First Search\n";
-    std::cout << d_f_s(root, str) << " nodes visited." << std::endl;
-    std::cout << '\n';
-    std::cout << "BFS - Breadth First Search\n";
-    std::cout << b_f_s(root, str) << " nodes visited." << std::endl;
+    std::cout << "----- DFS - Depth First Search -----\n";
+    std::chrono::steady_clock::time_point begin_dfs = std::chrono::steady_clock::now();
+
+    std::cout << d_f_s(root, str) << " node(s) visited." << std::endl;
+
+    // clockwork
+    std::cout << "----- DFS Elapsed Time: -----\n";
+    std::chrono::steady_clock::time_point end_dfs = std::chrono::steady_clock::now();
+    std::chrono::steady_clock::time_point final_dfs(end_dfs - begin_dfs);
+    std::cout << "nanoseconds: " << std::chrono::duration_cast<std::chrono::nanoseconds>(final_dfs.time_since_epoch()).count() << std::endl;
+    std::cout << "milliseconds: " << final_dfs.time_since_epoch().count() / 1000000.0 << std::endl;     // 1 million
+    std::cout << "seconds: " << final_dfs.time_since_epoch().count() / 1000000000.0 << std::endl;       // 1 billion
+    ///
+    ///
+    std::cout << "\n----- BFS - Breadth First Search -----\n";
+    std::chrono::steady_clock::time_point begin_BrE = std::chrono::steady_clock::now();
+
+    std::cout << b_f_s(root, str) << " node(s) visited." << std::endl;
+
+    // clockwork
+    std::cout << "----- BFS Elapsed Time: -----\n";
+    std::chrono::steady_clock::time_point end_BrE = std::chrono::steady_clock::now();
+    std::chrono::steady_clock::time_point final_BrE(end_BrE - begin_BrE);
+    std::cout << "nanoseconds: " << std::chrono::duration_cast<std::chrono::nanoseconds>(final_BrE.time_since_epoch()).count() << std::endl;
+    std::cout << "milliseconds: " << final_BrE.time_since_epoch().count() / 1000000.0 << std::endl;     // 1 million
+    std::cout << "seconds: " << final_BrE.time_since_epoch().count() / 1000000000.0 << std::endl;       // 1 billion
+
 
 
 
@@ -146,10 +71,17 @@ int main() {
 
 
 
-/** BELOW IS THE CODE EQUIVALENT OF SCRATCH WORK USED THROUGH THE PROJECT **/
+/** SCRATCH WORK BELOW **/
 
+/*
+std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
 
-/*  Testing stack references. Conclusion follows.
+std::cout << "Time difference = " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() <<std::endl;
+std::cout << "Time difference = " << std::chrono::duration_cast<std::chrono::nanoseconds> (end - begin).count() <<std::endl;
+ */
+
+/*  Testing stack references. Conclusion follows. Place into gist eventually.
  *
  *  using namespace std;
     cout << '\n';
