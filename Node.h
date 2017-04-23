@@ -11,27 +11,31 @@
 
 class Node {
 public:
+    /// ctors
     Node();
-    Node(std::string value, Node &parent);
     Node(const std::string &value);
-    std::string get_val() const { return val; }
-    int get_num_children() const { return num_children; }
-    std::vector<Node *> get_Vec() { return v; }
+    Node(std::string value, Node &parent);
+    /// operations
+    void m_extractVal();
     void attach(Node &node);
     void print_my_children() const;
-    void m_extractVal();
     Node&operator=(const Node &other);
-
+    /// getters
+    std::string get_val() const { return val; }
+    std::vector<Node *> get_Vec() const { return v; }
+    int get_num_children() const { return num_children; }
 private:
     std::vector<Node *> v;
     std::string val;
     int num_children;
 };
 
-int d_f_s(Node &node, std::string &target);
-int b_f_s(Node &node, std::string &target);
+Node pick_random(const Node &n);
 Node build_tree_xml(std::fstream &file);
-Node pick_random(Node &n);
+int d_f_s(Node &node, const std::string &target);
+int b_f_s(Node &node, const std::string &target);
+std::vector<Node> action_list(const Node &root);
+bool equals_ignore_case(const std::string &s1, const std::string &s2);
 
 
 

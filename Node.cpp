@@ -4,20 +4,14 @@
 #include <ctime>
 #include "Node.h"
 
-
 /**
- * Constructs DEFAULT node object. Note: val is "100" for debug.
- *
- * @param none
- * @return none
+ * Constructs DEFAULT node object. "100" for debug & nice numbers.
  */
 Node::Node() : num_children(0), val("100"), v() {}
 
-
 /**
  * Constructs node object initialized with string value
- * and is attached to parent node parent.
- *
+ * and is attached to parent node parent <code>this</code>.
  * @param value
  * @param parent
  */
@@ -26,16 +20,14 @@ Node::Node(std::string value, Node &parent) : num_children(0), val(value), v() {
 }
 
 /**
- * Constructs node object initialized with string value
- *
+ * Constructs node object initialized with string parameter <code>value</code>.
  * @param value
  */
 Node::Node(const std::string &value) : num_children(0), val(value), v() {}
 
 /**
- * Overloaded assignment operator= use primarily for debug
- *
- * @param other (returns the modified calling node)
+ * Overloaded assignment operator.
+ * @param other
  * @return
  */
 Node &Node::operator=(const Node &other) {
@@ -48,9 +40,7 @@ Node &Node::operator=(const Node &other) {
 /**
  * Attaches <code>node</code> to <code>this</code> node.
  * Improved.
- *
  * @param node
- * @return none
  */
 void Node::attach(Node &node) {
     Node *nptr = &node;
@@ -59,7 +49,7 @@ void Node::attach(Node &node) {
 }
 
 /**
- * Prints first layer children of <code>this</code> node
+ * Prints first layer children of <code>this</code> node.
  */
 void Node::print_my_children() const {
     for (Node *i : v) {
@@ -71,9 +61,6 @@ void Node::print_my_children() const {
 /**
  * Extracts behaviour or response string value from calling node.
  * Root node's value <root> remains unchanged in this implementation.
- *
- * @param none
- * @return none
  */
 void Node::m_extractVal() {
 
@@ -84,7 +71,6 @@ void Node::m_extractVal() {
             found = val.find_first_of("<>/", found + 1);
 
         }
-
         return;
     }
 
@@ -113,12 +99,15 @@ void Node::m_extractVal() {
             pos_r++;
 
         }
-
     }
-
 }
 
-
+/**
+ * Parses XML file and builds the decision tree.
+ * File format must follow tree.xml's format.
+ * @param file
+ * @return
+ */
 Node build_tree_xml(std::fstream &file) {
     std::stack<Node> stack;
     std::string line; std::getline(file, line);
@@ -155,10 +144,6 @@ Node build_tree_xml(std::fstream &file) {
     return tree_root;
 }
 
-
-
-
-
 /**
  * Depth First Search - DFS
  *
@@ -166,7 +151,7 @@ Node build_tree_xml(std::fstream &file) {
  * @param target
  * @return number of nodes visited
  */
-int d_f_s(Node &node, std::string &target) {
+int d_f_s(Node &node, const std::string &target) {
     std::cout << "Target -> " << target << '\n';
     int count = 0;
     bool flag = false;
@@ -202,7 +187,6 @@ int d_f_s(Node &node, std::string &target) {
     return count;
 }
 
-
 /**
  * Breadth First Search - BFS
  *
@@ -210,7 +194,7 @@ int d_f_s(Node &node, std::string &target) {
  * @param target
  * @return number of nodes visited
  */
-int b_f_s(Node &node, std::string &target) {
+int b_f_s(Node &node, const std::string &target) {
     std::cout << "Target -> " << target << '\n';
     bool flag = false;
     int count = 0;
@@ -248,55 +232,87 @@ int b_f_s(Node &node, std::string &target) {
     return count;
 }
 
-
 /**
- * Note: commented code at bottom for debug but also very helpful
- * to see list of possible leafs that could be chosen.
- *
- * Selects random leaf node from given parent {&node}. Seed is
- * initialized with time(NULL) inside pick_random. This function
- * is called twice, once in bfs, another in dfs. Race condition
- * started for identical output. Should always be same output though. In case of
- * different values (which has never occurred with my machine),
- * simply take out call from either dfs or bfs but not both. This
- * fulfills the same requirements with extra safety.
- *
+ * Selects random leaf node from given parent <code>node</code>.
+ * This function is called twice, once in bfs, another in dfs.
+ * Seed is initialized with time(NULL) inside function. Thus,
+ * a call to rand() uses same seed which is desired for this
+ * program; we want dfs and bfs to select same node.
  * @param node
- * @return the leaf node.
+ * @return
  */
-Node pick_random(Node &node) {
+Node pick_random(const Node &node) {
     srand((unsigned int) time(NULL));       // must be here so bfs & dfs use same seed.
-    std::vector<Node> vector;               /**< Holds node positions for printing & stochastic selection */
-    std::stack<Node> stack;                 /**< For diving through tree. Not depth first! */
+    std::vector<Node> response_vec;
+    std::stack<Node> stack;
     stack.push(node);
 
     while (!stack.empty()) {
         Node tmp = stack.top();
         if (tmp.get_num_children() == 0) {
-            vector.push_back(tmp);
+            response_vec.push_back(tmp);
             stack.pop();
 
         }
         else {
-            stack.pop();                            // pop tmp since not a leaf. Warning! Do not place after for loop
-                                                    // bad time friend ahead. pop a leaf and enter infinite loop!
+            stack.pop();
+
             for (auto item : tmp.get_Vec()) {
                 stack.push(*item);                  // unlike dfs, doesn't matter if leafs are reversed on stack
-            }                                       //  since vector will choose them randomly
+            }                                       // since response_vec will choose them randomly.
         }
     }
 
-    // because nodes placed backwards on stack (not depth first), I use reverse_iterator to print in order.
-    // If changed to depth first, use normal iterator.
-    std::vector<Node>::reverse_iterator rit = vector.rbegin();
-    for (; rit != vector.rend(); ++rit)
+    // nodes placed reversed on stack. reverse iterator to print in order.
+    std::vector<Node>::reverse_iterator rit = response_vec.rbegin();
+    for (; rit != response_vec.rend(); ++rit)
         std::cout << "Option -> " << rit->get_val() << '\n';
 
-    int num = (int) (rand() % vector.size());
+    int num = (int) (rand() % response_vec.size());
 
-    Node the_chosen_one = vector[num];
+    Node the_chosen_one = response_vec[num];
 
     std::cout << "Stochastic Response -> " << the_chosen_one.get_val() << '\n';
 
     return the_chosen_one;
+}
+
+/**
+ * Case insensitive string comparison.
+ * Custom string function that returns <code>true</code> if two strings are
+ * equal (ignoring cases). False otherwise. Does not account for unicode, etc.
+ * @param s1
+ * @param s2
+ * @return
+ */
+bool equals_ignore_case(const std::string &s1, const std::string &s2) {
+    long long tmp = s1.size();
+    if (s2.size() != tmp)
+        return false;
+    for (long long i = 0; i < tmp; i++)
+        if (std::tolower(s1[i]) != std::tolower(s2[i]))
+            return false;
+    return true;
+}
+
+/**
+ * Returns list of possible actions to take within the decision tree.
+ * @param root
+ * @return
+ */
+std::vector<Node> action_list(const Node &root) {
+    std::queue<Node> queue;
+    std::vector<Node> vector;
+    queue.push(root);
+    while (!queue.empty()) {
+        Node tmp = queue.front();
+        vector.push_back(tmp);  // expression must be rvalue
+        queue.pop();
+        if (tmp.get_num_children() != 0) {
+            for (auto node : tmp.get_Vec()) {
+                queue.push(*node);
+            }
+        }
+    }
+    return vector;
 }
