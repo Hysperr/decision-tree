@@ -1,4 +1,4 @@
-# Decision_Game_Tree
+# Decision_Tree
 ###### C++11 Required ######
 
 These files demonstrate xml parsing, std::chrono capabilities, depth first and breadth first searching.
