@@ -15,8 +15,8 @@ Node::Node() : num_children(0), val("100"), v() {}
  * @param value
  * @param parent
  */
-Node::Node(std::string value, Node &parent) : num_children(0), val(value), v() {
-    parent.attach(*this);       // 'this' is pointer to object's self. Dereferenced to satisfy attach() ref parameter
+Node::Node(const std::string value, Node &parent) : num_children(0), val(value), v() {
+    parent.attach(*this);       // 'this' is pointer to created object's self.
 }
 
 /**
@@ -151,21 +151,21 @@ Node build_tree_xml(std::fstream &file) {
  * @param target
  * @return number of nodes visited
  */
-int d_f_s(Node &node, const std::string &target) {
+void d_f_s(Node &node, const std::string &target) {
     std::cout << "Target -> " << target << '\n';
-    int count = 0;
     bool flag = false;
+    int count = 0;
     std::stack<Node> stack;
     stack.push(node);
 
     while (!stack.empty()) {
         count += 1;
         Node tmp = stack.top();
-        /**std::cout << tmp.get_val() << std::endl;*/           // for debug
 
-        if (tmp.get_val() == target) {
+        if (equals_ignore_case(tmp.get_val(), target)) {
             std::cout << "Status -> FOUND" << '\n';
-            pick_random(tmp);
+            std::cout << "Travel -> " << count << " nodes" << '\n';
+            pick_random_leaf(tmp);
             flag = true;
             break;
         }
@@ -178,13 +178,9 @@ int d_f_s(Node &node, const std::string &target) {
             }
         }
     }
-    if (!flag) {
-        std::cout << "Status -> N/A\n";
-        std::cout << "The node \"" << target << "\" does not exist." << '\n';
-        return count;
-    }
 
-    return count;
+    if (!flag)
+        std::cout << "Status -> N/A\nThe node \"" << target << "\" does not exist." << '\n';
 }
 
 /**
@@ -194,7 +190,7 @@ int d_f_s(Node &node, const std::string &target) {
  * @param target
  * @return number of nodes visited
  */
-int b_f_s(Node &node, const std::string &target) {
+void b_f_s(Node &node, const std::string &target) {
     std::cout << "Target -> " << target << '\n';
     bool flag = false;
     int count = 0;
@@ -204,11 +200,11 @@ int b_f_s(Node &node, const std::string &target) {
     while (!queue.empty()) {
         count += 1;
         Node tmp = queue.front();
-        /**std::cout << tmp.get_val() << std::endl;*/               // for debug
 
-        if (tmp.get_val() == target) {
+        if (equals_ignore_case(tmp.get_val(), target)) {
             std::cout << "Status -> FOUND" << '\n';
-            pick_random(tmp);
+            std::cout << "Travel -> " << count << " nodes" << '\n';
+            pick_random_leaf(tmp);
             flag = true;
             break;
         }
@@ -222,14 +218,8 @@ int b_f_s(Node &node, const std::string &target) {
         }
     }
 
-    if (!flag) {
-        std::cout << "Status -> N/A\n";
-        std::cout << "The node \"" << target << "\" does not exist." << '\n';
-        return count;
-
-    }
-
-    return count;
+    if (!flag)
+        std::cout << "Status -> N/A\nThe node \"" << target << "\" does not exist." << '\n';
 }
 
 /**
@@ -241,7 +231,7 @@ int b_f_s(Node &node, const std::string &target) {
  * @param node
  * @return
  */
-Node pick_random(const Node &node) {
+Node pick_random_leaf(const Node &node) {
     srand((unsigned int) time(NULL));       // must be here so bfs & dfs use same seed.
     std::vector<Node> response_vec;
     std::stack<Node> stack;
@@ -257,13 +247,13 @@ Node pick_random(const Node &node) {
         else {
             stack.pop();
 
-            for (auto item : tmp.get_Vec()) {
+            for (auto &item : tmp.get_Vec()) {
                 stack.push(*item);                  // unlike dfs, doesn't matter if leafs are reversed on stack
             }                                       // since response_vec will choose them randomly.
         }
     }
 
-    // nodes placed reversed on stack. reverse iterator to print in order.
+    // nodes placed reversed on stack so reverse iterator to print in order
     std::vector<Node>::reverse_iterator rit = response_vec.rbegin();
     for (; rit != response_vec.rend(); ++rit)
         std::cout << "Option -> " << rit->get_val() << '\n';
@@ -286,10 +276,10 @@ Node pick_random(const Node &node) {
  * @return
  */
 bool equals_ignore_case(const std::string &s1, const std::string &s2) {
-    long long tmp = s1.size();
+    unsigned long long tmp = s1.size();     // or use size_t since 8 bytes like ULL
     if (s2.size() != tmp)
         return false;
-    for (long long i = 0; i < tmp; i++)
+    for (unsigned long long i = 0; i < tmp; i++)
         if (std::tolower(s1[i]) != std::tolower(s2[i]))
             return false;
     return true;
@@ -306,10 +296,10 @@ std::vector<Node> action_list(const Node &root) {
     queue.push(root);
     while (!queue.empty()) {
         Node tmp = queue.front();
-        vector.push_back(tmp);  // expression must be rvalue
+        vector.push_back(tmp);
         queue.pop();
         if (tmp.get_num_children() != 0) {
-            for (auto node : tmp.get_Vec()) {
+            for (auto &node : tmp.get_Vec()) {
                 queue.push(*node);
             }
         }

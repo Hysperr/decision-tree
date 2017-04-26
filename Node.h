@@ -14,7 +14,7 @@ public:
     /// ctors
     Node();
     Node(const std::string &value);
-    Node(std::string value, Node &parent);
+    Node(const std::string value, Node &parent);
     /// operations
     void m_extractVal();
     void attach(Node &node);
@@ -30,11 +30,11 @@ private:
     int num_children;
 };
 
-Node pick_random(const Node &n);
+Node pick_random_leaf(const Node &node);
 Node build_tree_xml(std::fstream &file);
-int d_f_s(Node &node, const std::string &target);
-int b_f_s(Node &node, const std::string &target);
 std::vector<Node> action_list(const Node &root);
+void d_f_s(Node &node, const std::string &target);
+void b_f_s(Node &node, const std::string &target);
 bool equals_ignore_case(const std::string &s1, const std::string &s2);
 
 
