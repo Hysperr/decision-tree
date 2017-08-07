@@ -13,8 +13,8 @@ class Node {
 public:
     /// ctors
     Node();
-    Node(const std::string &value);
-    Node(const std::string value, Node &parent);
+    explicit Node(const std::string &value);
+    Node(std::string value, Node &parent);
     /// operations
     void m_extractVal();
     void attach(Node &node);

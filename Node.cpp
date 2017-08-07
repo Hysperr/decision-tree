@@ -5,9 +5,15 @@
 #include "Node.h"
 
 /**
- * Constructs DEFAULT node object. "100" for debug & nice numbers.
+ * Constructs DEFAULT node object. "-".
  */
-Node::Node() : num_children(0), val("100"), v() {}
+Node::Node() : num_children(0), val("-"){}
+
+/**
+ * Constructs node object initialized with string parameter <code>value</code>.
+ * @param value
+ */
+Node::Node(const std::string &value) : num_children(0), val(value) {}
 
 /**
  * Constructs node object initialized with string value
@@ -15,15 +21,11 @@ Node::Node() : num_children(0), val("100"), v() {}
  * @param value
  * @param parent
  */
-Node::Node(const std::string value, Node &parent) : num_children(0), val(value), v() {
-    parent.attach(*this);       // 'this' is pointer to created object's self.
+Node::Node(std::string value, Node &parent) : num_children(0), val(std::move(value)) {
+    parent.attach(*this);
 }
 
-/**
- * Constructs node object initialized with string parameter <code>value</code>.
- * @param value
- */
-Node::Node(const std::string &value) : num_children(0), val(value), v() {}
+
 
 /**
  * Overloaded assignment operator.
