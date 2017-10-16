@@ -1,5 +1,3 @@
-#include <cassert>
-#include <utility>
 #include "Node.h"
 #include <random>
 #include <chrono>
@@ -16,7 +14,7 @@ Node::Node(std::string value) : num_children(0), val(std::move(value)) {}
  * Rvalue reference binds to rvalue. Rvalue ref is an lvalue so
  * std::move casts node to rvalue to bind to push_back's rvalue ref param.
  * Move semantic order:
- * temporary binds to Node&& -> st::move casts to rvalue -> push_back bind -> implementation (moved)
+ * temporary binds to Node&& -> std::move casts to rvalue -> push_back bind -> implementation (moved)
  * The push_back called is push_back(value_type &&__x)
  * @param node
  */
@@ -53,12 +51,12 @@ void Node::m_extractVal() {
     if (val.find("<root>") != std::string::npos || val.find("</node>") != std::string::npos) {
         std::size_t found = val.find_first_of("<>/");
         while (found != std::string::npos) {
-            val[found] = '\0';                                  // do nothing. Or use (char) 0, this is null char
+            val[found] = '\0';                              // do nothing. Or use (char) 0, this is null char
             found = val.find_first_of("<>/", found + 1);
         }
         return;
     }
-    if (val.find("behavior=\"\"") == std::string::npos) {      // we have behaviour
+    if (val.find("behavior=\"\"") == std::string::npos) {   // we have behaviour
         std::string str = val; val.clear();
         std::size_t pos_b = str.find_first_of('"');
         pos_b++;
@@ -67,14 +65,14 @@ void Node::m_extractVal() {
             pos_b++;
         }
         pos_b = val.find(" response=");
-        if (pos_b != std::string::npos) {                        // found " response=", erase to end of string
+        if (pos_b != std::string::npos) {                   // found " response=", erase to end of string
             val.erase(pos_b);
         }
     }
-    else {                                                      // we have response
+    else {                                                  // we have response
         std::string str = val; val.clear();
         std::size_t pos_r = str.find_first_of('"', str.find("response="));
-        pos_r++;                                                // places us 1 index after quote of response="
+        pos_r++;                                            // places us 1 index after quote of response="
         while (str.at(pos_r) != '"') {
             val.push_back(str[pos_r]);
             pos_r++;
@@ -86,8 +84,8 @@ void Node::m_extractVal() {
 /**
  * Parses XML file and builds the decision tree.
  * File format must follow tree.xml's format.
- * @param file
- * @return
+ * @param file the xml file to read from
+ * @return a n-ary decision tree
  */
 Node build_tree_xml(std::fstream &file) {
     std::stack<Node> stack;
@@ -111,11 +109,8 @@ Node build_tree_xml(std::fstream &file) {
         std::getline(file, line);
         stack.push(Node(line));
     }
-    stack.pop();                                // pop </root>
-    // Node tree_root = stack.top();            // retrieve root node
-    // stack.pop();                             // clear stack
-    // assert(stack.empty());                   // check stack empty
-    return stack.top();                         // retrieve root node (the tree root)
+    stack.pop();        // pop </root>
+    return stack.top(); // retrieve tree root node (last node in stack)
 }
 
 /**
@@ -143,7 +138,7 @@ void d_f_s(const Node &node, const std::string &target) {
         else {
             stack.pop();
             if (tmp.get_num_children() != 0) {
-                for (int i = static_cast<int>(tmp.get_vec().size() - 1); i >= 0; i--)
+                for (auto i = static_cast<int>(tmp.get_vec().size() - 1); i >= 0; --i)
                     stack.push(tmp.get_vec()[i]);
             }
         }
@@ -231,7 +226,7 @@ Node pick_random_leaf(const Node &node) {
  * @return
  */
 bool equals_ignore_case(const std::string &s1, const std::string &s2) { // consider move optimization
-    size_t tmp = s1.size();     // or use size_t since 8 bytes like ULL
+    size_t tmp = s1.size();
     if (s2.size() != tmp)
         return false;
     for (size_t i = 0; i < tmp; i++)

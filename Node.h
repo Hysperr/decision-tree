@@ -18,7 +18,7 @@ public:
     void print_my_children() const;
     // getters
     std::string get_val() const { return val; }
-    std::vector<Node> get_vec() const { return vec; }
+    const std::vector<Node>& get_vec() const { return vec; }
     unsigned int get_num_children() const { return num_children; }
 private:
     std::vector<Node> vec;
