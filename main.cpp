@@ -1,5 +1,3 @@
-
-
 #include "Node.h"
 #include <sstream>
 #include <chrono>
@@ -14,7 +12,7 @@ int main() {
 
     std::cout << "\n----- Available actions -----\n";
     std::vector<Node> avec = action_list(root);
-    for (Node i : avec) {
+    for (const Node& i : avec) {
         std::cout << i.get_val() << '\n';
     }
     std::cout << '\n';
@@ -55,7 +53,7 @@ int main() {
 
         std::cout << "Search tree for stochastic response. Enter \"000\" to terminate program.\n";
         std::cout << "\n----- Available actions -----\n";
-        for (Node i : avec) {
+        for (const Node& i : avec) {
             std::cout << i.get_val() << '\n';
         }
         std::cout << '\n';

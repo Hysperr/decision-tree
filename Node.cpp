@@ -1,52 +1,37 @@
-
-
 #include <cassert>
-#include <ctime>
+#include <utility>
 #include "Node.h"
+#include <random>
+#include <chrono>
 
 /**
- * Constructs DEFAULT node object. "-".
- */
-Node::Node() : num_children(0), val("-"){}
-
-/**
- * Constructs node object initialized with string parameter <code>value</code>.
+ * Constructs node object initialized with moved string parameter <code>value</code>.
+ * Either a copy then move or a move and move if dev optimizes for it.
  * @param value
  */
-Node::Node(const std::string &value) : num_children(0), val(value) {}
-
-/**
- * Constructs node object initialized with string value
- * and is attached to parent node parent <code>this</code>.
- * @param value
- * @param parent
- */
-Node::Node(std::string value, Node &parent) : num_children(0), val(std::move(value)) {
-    parent.attach(*this);
-}
-
-
-
-/**
- * Overloaded assignment operator.
- * @param other
- * @return
- */
-Node &Node::operator=(const Node &other) {
-    v = other.v;
-    val = other.val;
-    num_children = other.num_children;
-    return *this;
-}
+Node::Node(std::string value) : num_children(0), val(std::move(value)) {}
 
 /**
  * Attaches <code>node</code> to <code>this</code> node.
- * Improved.
+ * Rvalue reference binds to rvalue. Rvalue ref is an lvalue so
+ * std::move casts node to rvalue to bind to push_back's rvalue ref param.
+ * Move semantic order:
+ * temporary binds to Node&& -> st::move casts to rvalue -> push_back bind -> implementation (moved)
+ * The push_back called is push_back(value_type &&__x)
  * @param node
  */
-void Node::attach(Node &node) {
-    Node *nptr = &node;
-    v.push_back(nptr);
+void Node::attach(Node &&node) {
+    vec.push_back(std::move(node));
+    num_children++;
+}
+
+/**
+ * Attaches node to this node. const Node& will bind to r or l values.
+ * If rvalue ref funct active, this will not get the rvalue call. The
+ * push_back called is push_back(const value_type &__x)
+ */
+void Node::attach(const Node &node) {
+    vec.push_back(node);
     num_children++;
 }
 
@@ -54,8 +39,8 @@ void Node::attach(Node &node) {
  * Prints first layer children of <code>this</code> node.
  */
 void Node::print_my_children() const {
-    for (Node *i : v) {
-        std::cout << i->get_val() << std::ends;
+    for (const auto &i : vec) {
+        std::cout << i.get_val() << ' ';
     }
     std::cout << "\n";
 }
@@ -65,37 +50,31 @@ void Node::print_my_children() const {
  * Root node's value <root> remains unchanged in this implementation.
  */
 void Node::m_extractVal() {
-
     if (val.find("<root>") != std::string::npos || val.find("</node>") != std::string::npos) {
         std::size_t found = val.find_first_of("<>/");
         while (found != std::string::npos) {
             val[found] = '\0';                                  // do nothing. Or use (char) 0, this is null char
             found = val.find_first_of("<>/", found + 1);
-
         }
         return;
     }
-
     if (val.find("behavior=\"\"") == std::string::npos) {      // we have behaviour
         std::string str = val; val.clear();
         std::size_t pos_b = str.find_first_of('"');
         pos_b++;
-
         while (str.at(pos_b) != '"') {
             val.push_back(str[pos_b]);
             pos_b++;
-
         }
         pos_b = val.find(" response=");
-        if (pos_b != std::string::npos)                         // found " response=", erase to end of string
+        if (pos_b != std::string::npos) {                        // found " response=", erase to end of string
             val.erase(pos_b);
-
+        }
     }
     else {                                                      // we have response
         std::string str = val; val.clear();
         std::size_t pos_r = str.find_first_of('"', str.find("response="));
         pos_r++;                                                // places us 1 index after quote of response="
-
         while (str.at(pos_r) != '"') {
             val.push_back(str[pos_r]);
             pos_r++;
@@ -113,57 +92,47 @@ void Node::m_extractVal() {
 Node build_tree_xml(std::fstream &file) {
     std::stack<Node> stack;
     std::string line; std::getline(file, line);
-    Node *r0 = new Node(line);
-    stack.push(*r0);
+    stack.push(Node(line));
     while (stack.top().get_val().find("</root>") == std::string::npos) {
-
         if (stack.top().get_val().find("/>") != std::string::npos) {
-            Node *tmp1 = new Node(stack.top());
+            Node tmp1(stack.top());
             stack.pop();
-            tmp1->m_extractVal();
-            stack.top().attach(*tmp1);
-
+            tmp1.m_extractVal();
+            stack.top().attach(tmp1);
         }
         else if (stack.top().get_val().find("/node") != std::string::npos) {
             stack.pop();
-            Node *tmp2 = new Node(stack.top());
+            Node tmp2(stack.top());
             stack.pop();
-            tmp2->m_extractVal();
-            stack.top().attach(*tmp2);
-
+            tmp2.m_extractVal();
+            stack.top().attach(tmp2);
+            // stack.top().attach(Node(line)); // testing attach(Node &&node)
         }
-
         std::getline(file, line);
-        Node *tmp3 = new Node(line);
-        stack.push(*tmp3);
-
+        stack.push(Node(line));
     }
-
     stack.pop();                                // pop </root>
-    Node tree_root = stack.top();               // retrieve root node
-    stack.pop();                                // clear stack
-    assert(stack.empty());                      // check stack empty
-    return tree_root;
+    // Node tree_root = stack.top();            // retrieve root node
+    // stack.pop();                             // clear stack
+    // assert(stack.empty());                   // check stack empty
+    return stack.top();                         // retrieve root node (the tree root)
 }
 
 /**
  * Depth First Search - DFS
- *
  * @param node
  * @param target
  * @return number of nodes visited
  */
-void d_f_s(Node &node, const std::string &target) {
+void d_f_s(const Node &node, const std::string &target) {
     std::cout << "Target -> " << target << '\n';
     bool flag = false;
     int count = 0;
     std::stack<Node> stack;
     stack.push(node);
-
     while (!stack.empty()) {
         count += 1;
         Node tmp = stack.top();
-
         if (equals_ignore_case(tmp.get_val(), target)) {
             std::cout << "Status -> FOUND" << '\n';
             std::cout << "Travel -> " << count << " nodes" << '\n';
@@ -173,36 +142,31 @@ void d_f_s(Node &node, const std::string &target) {
         }
         else {
             stack.pop();
-
             if (tmp.get_num_children() != 0) {
-                for (int i = (int) (tmp.get_Vec().size() - 1); i >= 0; i--)
-                    stack.push(*tmp.get_Vec()[i]);
+                for (int i = static_cast<int>(tmp.get_vec().size() - 1); i >= 0; i--)
+                    stack.push(tmp.get_vec()[i]);
             }
         }
     }
-
     if (!flag)
         std::cout << "Status -> N/A\nThe node \"" << target << "\" does not exist." << '\n';
 }
 
 /**
  * Breadth First Search - BFS
- *
  * @param node
  * @param target
  * @return number of nodes visited
  */
-void b_f_s(Node &node, const std::string &target) {
+void b_f_s(const Node &node, const std::string &target) {
     std::cout << "Target -> " << target << '\n';
     bool flag = false;
     int count = 0;
     std::queue<Node> queue;
     queue.push(node);
-
     while (!queue.empty()) {
         count += 1;
         Node tmp = queue.front();
-
         if (equals_ignore_case(tmp.get_val(), target)) {
             std::cout << "Status -> FOUND" << '\n';
             std::cout << "Travel -> " << count << " nodes" << '\n';
@@ -212,14 +176,12 @@ void b_f_s(Node &node, const std::string &target) {
         }
         else {
             queue.pop();
-
             if (tmp.get_num_children() != 0) {
-                for (Node *i : tmp.get_Vec())
-                    queue.push(*i);
+                for (const Node &i : tmp.get_vec())
+                    queue.push(i);
             }
         }
     }
-
     if (!flag)
         std::cout << "Status -> N/A\nThe node \"" << target << "\" does not exist." << '\n';
 }
@@ -227,45 +189,36 @@ void b_f_s(Node &node, const std::string &target) {
 /**
  * Selects random leaf node from given parent <code>node</code>.
  * This function is called twice, once in bfs, another in dfs.
- * Seed is initialized with time(NULL) inside function. Thus,
- * a call to rand() uses same seed which is desired for this
- * program; we want dfs and bfs to select same node.
  * @param node
  * @return
  */
 Node pick_random_leaf(const Node &node) {
-    srand((unsigned int) time(NULL));       // must be here so bfs & dfs use same seed.
     std::vector<Node> response_vec;
     std::stack<Node> stack;
     stack.push(node);
-
     while (!stack.empty()) {
         Node tmp = stack.top();
         if (tmp.get_num_children() == 0) {
             response_vec.push_back(tmp);
             stack.pop();
-
         }
         else {
             stack.pop();
-
-            for (auto &item : tmp.get_Vec()) {
-                stack.push(*item);                  // unlike dfs, doesn't matter if leafs are reversed on stack
-            }                                       // since response_vec will choose them randomly.
+            for (const Node &i : tmp.get_vec()) {
+                stack.push(i);      // unlike dfs, doesn't matter if leafs are reversed on stack
+            }                       // since response_vec will choose them randomly.
         }
     }
-
-    // nodes placed reversed on stack so reverse iterator to print in order
-    std::vector<Node>::reverse_iterator rit = response_vec.rbegin();
-    for (; rit != response_vec.rend(); ++rit)
+    // nodes placed reversed on stack; reversed in vector so reverse iterator to print in order
+    for (auto rit = response_vec.rbegin(); rit != response_vec.rend(); ++rit) {
         std::cout << "Option -> " << rit->get_val() << '\n';
-
-    int num = (int) (rand() % response_vec.size());
-
+    }
+    auto seed = std::chrono::system_clock::now().time_since_epoch().count();
+    std::mt19937_64 mt {seed};
+    auto uid = std::uniform_int_distribution<int>(0, static_cast<int>(response_vec.size() - 1));
+    int num = uid(mt);
     Node the_chosen_one = response_vec[num];
-
     std::cout << "Stochastic Response -> " << the_chosen_one.get_val() << '\n';
-
     return the_chosen_one;
 }
 
@@ -277,11 +230,11 @@ Node pick_random_leaf(const Node &node) {
  * @param s2
  * @return
  */
-bool equals_ignore_case(const std::string &s1, const std::string &s2) {
-    unsigned long long tmp = s1.size();     // or use size_t since 8 bytes like ULL
+bool equals_ignore_case(const std::string &s1, const std::string &s2) { // consider move optimization
+    size_t tmp = s1.size();     // or use size_t since 8 bytes like ULL
     if (s2.size() != tmp)
         return false;
-    for (unsigned long long i = 0; i < tmp; i++)
+    for (size_t i = 0; i < tmp; i++)
         if (std::tolower(s1[i]) != std::tolower(s2[i]))
             return false;
     return true;
@@ -301,8 +254,8 @@ std::vector<Node> action_list(const Node &root) {
         vector.push_back(tmp);
         queue.pop();
         if (tmp.get_num_children() != 0) {
-            for (auto &node : tmp.get_Vec()) {
-                queue.push(*node);
+            for (const auto &node : tmp.get_vec()) {
+                queue.push(node);
             }
         }
     }
